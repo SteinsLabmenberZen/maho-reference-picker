@@ -1,0 +1,5 @@
+let opening;
+function db(){return opening ||= new Promise((resolve,reject)=>{const r=indexedDB.open('maho-picker',1);r.onupgradeneeded=()=>r.result.createObjectStore('sessions',{keyPath:'id'});r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
+export async function putSession(value){const d=await db();await new Promise((resolve,reject)=>{const t=d.transaction('sessions','readwrite');t.objectStore('sessions').put(value);t.oncomplete=resolve;t.onerror=()=>reject(t.error);t.onabort=()=>reject(t.error);});}
+export async function getSessions(){const d=await db();return new Promise((resolve,reject)=>{const r=d.transaction('sessions').objectStore('sessions').getAll();r.onsuccess=()=>resolve(r.result.sort((a,b)=>b.updated-a.updated));r.onerror=()=>reject(r.error);});}
+export async function removeSession(id){const d=await db();return new Promise((resolve,reject)=>{const t=d.transaction('sessions','readwrite');t.objectStore('sessions').delete(id);t.oncomplete=resolve;t.onerror=()=>reject(t.error);});}

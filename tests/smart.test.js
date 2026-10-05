@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {suggestion,useful,imported} from '../smart.js';
+import {filterItems,mergeItems} from '../core.js';
+test('suggestions use image description, not unrelated page titles',()=>{assert.equal(suggestion({alt:'rabbit sketch'}).category,'动物');assert.equal(suggestion({alt:'人物动态线稿'}).category,'人物');assert.equal(suggestion({alt:'DSC123',sourceTitle:'animal sketch'}),null);});
+test('reference selection excludes tiny and likely decorative images',()=>{const i={width:900,height:1000,url:'https://a.test/1.jpg',alt:'练习'};assert.equal(useful(i),true);assert.equal(useful({...i,alt:'logo'}),false);assert.equal(useful({...i,width:0}),false);assert.equal(useful({...i,failed:true}),false);});
+test('imports validate addresses, deduplicate and preserve notes and selection',()=>{const i={url:'https://a.test/1.jpg',selected:true,favorite:true,note:'练比例',category:'动物'};const rows=imported({items:[i,i,{url:'javascript:alert(1)'}]});assert.equal(rows.length,1);assert.equal(rows[0].note,'练比例');assert.equal(rows[0].favorite,true);assert.equal(rows[0].selected,true);assert.throws(()=>imported({items:{}}));assert.throws(()=>imported({items:Array(1501).fill(i)}));});
+test('notes and favorites participate in filters',()=>{const i=imported({items:[{url:'https://a.test/1.png',note:'练比例',favorite:true}]})[0];assert.equal(filterItems([i],{query:'比例',onlyFavorites:true,unknown:true}).length,1);assert.equal(filterItems([{...i,favorite:false}],{onlyFavorites:true,unknown:true}).length,0);});
+test('rescan preserves favorites and notes',()=>{const i=imported({items:[{url:'https://a.test/1.png',note:'练比例',favorite:true}]})[0];assert.equal(mergeItems([i],[{...i,note:'',favorite:false}])[0].note,'练比例');});
+test('all bound UI IDs exist and are unique',()=>{const html=readFileSync(new URL('../picker.html',import.meta.url),'utf8'),js=readFileSync(new URL('../picker.js',import.meta.url),'utf8');const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);assert.equal(new Set(ids).size,ids.length);for(const m of js.matchAll(/\$\('([^']+)'\)/g))assert.ok(ids.includes(m[1]),m[1]);});
